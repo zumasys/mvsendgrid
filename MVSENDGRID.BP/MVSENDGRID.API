@@ -1,0 +1,181 @@
+      SUBROUTINE MVSENDGRID.API(OBJ)
+      **********************************************************************
+      *
+      * Copyright (C) 2018 Zumasys, Inc., All Rights Reserved
+      *
+      * Written by: Patrick Payne, Zumasys
+      * Date: 4/2/2019
+      * Description: SENDGRID wrapper
+
+      **********************************************************************
+      *
+      * Purpose of this program is to front end the sendgrid library of functions
+      *
+      * It will utilize the object model concept and try to wrap all sendgrid
+      * functions into this one library
+      *
+      *
+      * OBJ
+      * { "api":"mailsend_v2",
+      *    "params": {
+      *       "to": [
+      *         {
+      *           "email":"email address",
+      *           "name":"Nice name"
+      *         }
+      *       ],
+      *       "cc": [
+      *         {
+      *           "email":"email address",
+      *           "name":"Nice name"
+      *         }
+      *       ],
+      *       "bcc": [
+      *         {
+      *           "email":"email address",
+      *           "name":"Nice name"
+      *         }
+      *       ],
+      *       "replyto":"address",
+      *       "from":"From email address",
+      *       "fromname":"From name",
+      *       "subject":"Subject",
+      *       "text":"Plain text of your email",
+      *       "html":"Html version of your email",
+      *       "files": [
+      *           {
+      *              "sourcefile":"path to file",
+      *              "filename":"file name to present file as",
+      *              "type":"type of file, application/pdf for example"
+      *           }
+      *       ]
+      *    },
+      *   "result": {
+      *      "status":"error or ok",
+      *      "statusmsg:"status msg"
+      *    }
+      *
+      *  }
+      *
+      * Starting with mailsend_v2 - We are using this version because it allows
+      * attachments without having to base64 and include them into the json payload
+      * v2 uses curl and a normal form-data post to get attachments.
+      *
+      * curl https://api.sendgrid.com/api/mail.send.json \
+      *-F to=recipient@domain.com -F toname=test -F subject="Example Subject" \
+      *-F text="testing text body" --form-string html="<strong>testing html body</strong>" \
+      *-F from=test@yourdomain.com -F api_user=your_sendgrid_username -F api_key=your_sendgrid_password \
+      *-F files\[attachment.gz\]=@f.php.gz
+      *
+      *
+      * This intial part will initialize a object for a user.
+      *
+      WOBJ="MVDBTOOLKIT.WOBJ"
+
+      INIT.FUNCTION=OCONV(OBJ<1,1,1>,"MCU")
+
+      BEGIN CASE
+         CASE INIT.FUNCTION="MAILSEND_V2"
+            GOSUB mailsendv2.init
+            RETURN
+      END CASE
+
+      CALL @WOBJ(OBJ,"GET","api",API,"",RERR)
+
+      CALL @WOBJ(OBJ,"SET.OBJECT","result","{}","",RERR)
+
+      API=OCONV(API,'MCU')
+
+      APISTATUS="ok"
+      APISTATUSMSG=""
+
+      BEGIN CASE
+         CASE API="MAILSEND_V2"
+            GOSUB mailsendv2
+         CASE 1
+            APISTATUS="error"
+            APISTATUSMSG="Invalid api request (":API:")"
+      END CASE
+
+      CALL @WOBJ(OBJ,"SET","result.status",APISTATUS,"",RERR)
+      CALL @WOBJ(OBJ,"SET","result.statusmsg",APISTATUSMSG,"",RERR)
+
+      RETURN
+      STOP
+
+mailsendv2.init: * Initialize a email v2 object
+
+      OBJ=""
+      CALL @WOBJ(OBJ,"FROMSTRING","","{}","",RERR)
+      CALL @WOBJ(OBJ,"SET","api","mailsend_v2","",RERR)
+      CALL @WOBJ(OBJ,"SET.OBJECT","params","{}","",RERR)
+      CALL @WOBJ(OBJ,"SET.ARRAY","params.to",'[{"email":"","name"}]',"",RERR)
+      CALL @WOBJ(OBJ,"SET.ARRAY","params.cc",'[]',"",RERR)
+      CALL @WOBJ(OBJ,"SET.ARRAY","params.bcc",'[]',"",RERR)
+      CALL @WOBJ(OBJ,"SET.ARRAY","params.files",'[]',"",RERR)
+
+      RETURN
+
+
+mailsendv2: * Send an email
+
+      CALL @WOBJ(OBJ,"LENGTH","params.to",NUMBER.TOO,"",RERR)
+      IF NOT(NUMBER.TOO) THEN
+         APISTATUS="error"
+         APISTATUS="Must supply array of to"
+         RETURN
+      END
+
+      TOO.LABEL="to"; TOO.NAMES.LABEL="tonames"
+      IF NUMBER.TOO > 1 THEN TOO.LABEL:='[]'; TOO.NAMES.LABEL:='[]'
+
+      TOO=''; TOO.NAMES=''
+
+      CALL @WOBJ(COBJ,"FROMSTRING","","{}","",RERR)
+      CALL @WOBJ(COBJ,"SET","method","POST","",RERR)
+      CALL @WOBJ(COBJ,"SET","url","https://api.sendgrid.com/api/mail.send.json","",RERR)
+      CALL @WOBJ(COBJ,"SET","insecure","Y","",RERR)
+      
+      CALL @WOBJ(COBJ,"SET.ARRAY","formfields","[]","",RERR)
+
+      FOR X=1 TO NUMBER.TOO
+         P="params.to[":X-1:"]"
+         CALL @WOBJ(OBJ,"GET",P:".email",THIS.TO,"",RERR)
+         DEBUG
+         CALL @WOBJ(OBJ,"GET",P:".name",THIS.NAME,"",RERR)
+         IF INDEX(THIS.TO,'@',1) THEN
+            TOO<-1>=THIS.TO
+            TOO.NAMES<-1>=THIS.NAME
+         END
+         DEBUG
+      NEXT X
+
+      CONVERT CHAR(254) TO '&' IN TOO
+      CONVERT CHAR(254) TO '&' IN TOO.NAMES
+
+      CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
+      CALL @WOBJ(SOBJ,"SET","name",TOO.LABEL,"",RERR)
+      CALL @WOBJ(SOBJ,"SET","value",TOO,"",RERR)
+      CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
+      CALL @WOBJ(COBJ,"SET.OBJECT","formfields[-1]",SJSON,"",RERR)
+      
+      
+      CALL @WOBJ(COBJ,"TOSTRING","",CJSON,"PRETTIFY",RERR)
+      
+      PRINT CJSON
+
+
+      DEBUG
+
+      CALL MVDBTOOLKIT.WCALL(COBJ)
+
+      CALL @WOBJ(COBJ,"TOSTRING","",TJSON,"PRETTIFY",RERR)
+      PRINT TJSON
+      
+      CALL @WOBJ(OBJ,"GET","response.data",RESPONSE,"",RERR)
+
+DEBUG
+
+
+      RETURN
+
