@@ -8,7 +8,7 @@ CALL MVSENDGRID.API(OBJ)
 
 CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",1)
 
-CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickpayne@yahoo.com","",RERR)
+CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickaaronpayne@gmail.com","",RERR)
 CALL @WOBJ(OBJ,"SET","params.to[0].name","Patrick Payne","",RERR)
 
 CALL @WOBJ(OBJ,"SET","params.from","example@example.com","",RERR)
@@ -17,11 +17,29 @@ CALL @WOBJ(OBJ,"SET","params.subject","Sample email ":TIMEDATE(),"",RERR)
 
 CALL @WOBJ(OBJ,"SET","params.text","Sample Email Text","",RERR)
 
+CALL @WOBJ(OBJ,"SET.ARRAY","params.files","[]","",RERR)
+ 
+ CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
+ CALL @WOBJ(SOBJ,"SET","sourcefile","/tmp/JBASELICENSE.PDF","",RERR)
+ CALL @WOBJ(SOBJ,"SET","filename","jbaselicense.pdf","",RERR)
+ CALL @WOBJ(SOBJ,"SET","type","application/pdf","",RERR)
+ CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
+ CALL @WOBJ(OBJ,"SET.OBJECT","params.files[-1]",SJSON,"",RERR)
+ 
+  CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
+ CALL @WOBJ(SOBJ,"SET","sourcefile","/tmp/JBASELICENSE.PDF","",RERR)
+ CALL @WOBJ(SOBJ,"SET","filename","jbaselicense2.pdf","",RERR)
+ CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
+ CALL @WOBJ(OBJ,"SET.OBJECT","params.files[-1]",SJSON,"",RERR)
+ 
+ 
+ CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",RERR)
+ PRINT JSON
+ 
+
 CALL MVSENDGRID.API(OBJ)
 
 CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",RERR)
 
 PRINT JSON
-
-DEBUG
 

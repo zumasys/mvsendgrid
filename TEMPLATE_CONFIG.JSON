@@ -1,0 +1,5 @@
+{
+  "username":"user name for sendgrid (requried for v2 apis",
+  "password":"password for sendgrid (requried for v2 apis)",
+  "apikey":"Api Key for v3 apis (none built yet)
+}

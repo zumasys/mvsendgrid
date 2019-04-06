@@ -15,11 +15,12 @@
       * functions into this one library
       *
       * Items to do
-      * 
-      * Add File option.
+      *
+      * Add File option. (COMPLETED)
       * qc tests to validate fields sent
       * Config to get user name/password/etc
-      * Return Message/Status
+      * Return Message/Status (COMPLETED)
+      * REMOVE ALL DEBUG STATEMENTS
       *
       * OBJ
       * { "api":"mailsend_v2",
@@ -76,7 +77,10 @@
       *
       * This intial part will initialize a object for a user.
       *
+
       WOBJ="MVDBTOOLKIT.WOBJ"
+
+      FIELD.TYPE=""
 
       INIT.FUNCTION=OCONV(OBJ<1,1,1>,"MCU")
 
@@ -95,6 +99,20 @@
       APISTATUS="ok"
       APISTATUSMSG=""
 
+      OPEN "DICT","MVSENDGRID.BP" TO DICT.MVSENDGRID.BP ELSE
+         APISTATUS="error"
+         APISTATUSMSG="Could not open DICT MVSENDGRID.BP"
+         GOTO end.of.routine
+      END
+
+      READ CONFIG FROM DICT.MVSENDGRID.BP, "CONFIG.JSON" ELSE
+         APISTATUS="error"
+         APISTATUSMSG="NO CONFIG.JSON IN DICT MVSENDGRID.BP"
+         GOTO end.of.routine
+      END
+
+      CALL @WOBJ(CONFIGOBJ,"FROMSTRING","",CONFIG,"",RERR)
+
       BEGIN CASE
          CASE API="MAILSEND_V2"
             GOSUB mailsendv2
@@ -102,6 +120,8 @@
             APISTATUS="error"
             APISTATUSMSG="Invalid api request (":API:")"
       END CASE
+
+end.of.routine: *
 
       CALL @WOBJ(OBJ,"SET","result.status",APISTATUS,"",RERR)
       CALL @WOBJ(OBJ,"SET","result.statusmsg",APISTATUSMSG,"",RERR)
@@ -125,6 +145,21 @@ mailsendv2.init: * Initialize a email v2 object
 
 mailsendv2: * Send an email
 
+      * V2 USES USER NAME AND PASSWORD
+      CALL @WOBJ(CONFIGOBJ,"GET","username",SENDGRID.USERNAME,"",RERR)
+      CALL @WOBJ(CONFIGOBJ,"GET","password",SENDGRID.PASSWORD,"",RERR)
+
+      IF SENDGRID.USERNAME="" THEN
+         APISTATUS="error"
+         APISTATUSMSG="No username defined in CONFIG.JSON"
+         RETURN
+      END
+      IF SENDGRID.PASSWORD="" THEN
+         APISTATUS="error"
+         AISTATUSMSG="No password defined in CONFIG.JSON"
+         RETURN
+      END
+
       CALL @WOBJ(OBJ,"LENGTH","params.to",NUMBER.TOO,"",RERR)
       IF NOT(NUMBER.TOO) THEN
          APISTATUS="error"
@@ -132,7 +167,7 @@ mailsendv2: * Send an email
          RETURN
       END
 
-      TOO.LABEL="to"; TOO.NAMES.LABEL="tonames"
+      TOO.LABEL="to"; TOO.NAMES.LABEL="toname"
       IF NUMBER.TOO > 1 THEN TOO.LABEL:='[]'; TOO.NAMES.LABEL:='[]'
 
       TOO=''; TOO.NAMES=''
@@ -141,25 +176,19 @@ mailsendv2: * Send an email
       CALL @WOBJ(COBJ,"SET","method","POST","",RERR)
       CALL @WOBJ(COBJ,"SET","url","https://api.sendgrid.com/api/mail.send.json","",RERR)
       CALL @WOBJ(COBJ,"SET","insecure","Y","",RERR)
-      
-      
+
+
       CALL @WOBJ(COBJ,"SET.OBJECT","headers","{}","",RERR)
-      
-      SENDGRID.USER="patrickpayne@yahoo.com"
-      SENDGRID.KEY="SendgridZuma12!!"
-*      CALL @WOBJ(COBJ,"SET.STRING","headers.api_user",SENDGRID.USER,"",RERR)
-*      CALL @WOBJ(COBJ,"SET.STRING","headers.api_key",SENDGRID.KEY,"",RERR)
-      
-     
+
+
       CALL @WOBJ(COBJ,"SET.ARRAY","formfields","[]","",RERR)
 
-      FIELD.NAME="api_user"; FIELD.VALUE=SENDGRID.USER; GOSUB set.field
-      FIELD.NAME="api_key"; FIELD.VALUE=SENDGRID.KEY; GOSUB set.field
+      FIELD.NAME="api_user"; FIELD.VALUE=SENDGRID.USERNAME; GOSUB set.field
+      FIELD.NAME="api_key"; FIELD.VALUE=SENDGRID.PASSWORD; GOSUB set.field
 
       FOR X=1 TO NUMBER.TOO
          P="params.to[":X-1:"]"
          CALL @WOBJ(OBJ,"GET",P:".email",THIS.TO,"",RERR)
-         DEBUG
          CALL @WOBJ(OBJ,"GET",P:".name",THIS.NAME,"",RERR)
          IF INDEX(THIS.TO,'@',1) THEN
             TOO<-1>=THIS.TO
@@ -175,18 +204,19 @@ mailsendv2: * Send an email
       CALL @WOBJ(SOBJ,"SET","value",TOO,"",RERR)
       CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
       CALL @WOBJ(COBJ,"SET.OBJECT","formfields[-1]",SJSON,"",RERR)
-      
-     
+
+      FIELD.NAME=TOO.NAMES.LABEL; FIELD.VALUE=TOO.NAMES; GOSUB set.field
+
       CALL @WOBJ(OBJ,"GET","params.from",FROMEMAIL,"",RERR)
       IF FROMEMAIL="" THEN
          APISTATUS="error"
          APISTATUSMSG="Must supply from"
          RETURN
       END
-      FIELD.NAME="from"; FIELD.VALUE=FROMEMAIL; GOSUB set.field     
-     
+      FIELD.NAME="from"; FIELD.VALUE=FROMEMAIL; GOSUB set.field
+
       ** GET BODY **
-      
+
       CALL @WOBJ(OBJ,"GET","params.text",TEXT.BODY,"",RERR)
       CALL @WOBJ(OBJ,"GET","params.html",HTML.BODY,"",RERR)
       IF HTML.BODY="" AND TEXT.BODY="" THEN
@@ -194,11 +224,11 @@ mailsendv2: * Send an email
          APISTATUSMSG="Must supply either a text or html message"
          RETURN
       END
-      
+
       FIELD.NAME="text"; FIELD.VALUE=TEXT.BODY; GOSUB set.field
-      
+
       ** SUBJECT **
-      
+
       CALL @WOBJ(OBJ,"GET","params.subject",SUBJECT,"",RERR)
       IF SUBJECT="" THEN
          APISTATUS="error"
@@ -206,22 +236,39 @@ mailsendv2: * Send an email
          RETURN
       END
       FIELD.NAME="subject"; FIELD.VALUE=SUBJECT; GOSUB set.field
-      
-      
+
+
+      ** file uploads **
+
+      CALL @WOBJ(OBJ,"LENGTH","params.files",NUM.FILES,"",RERR)
+
+      IF NUM.FILES THEN
+         FOR X=1 TO NUM.FILES
+            P="params.files[":X-1:"]"
+            CALL @WOBJ(OBJ,"GET",P:'.sourcefile',SOURCEFILE,"",RERR)
+            CALL @WOBJ(OBJ,"GET",P:'.filename',FILENAME,"",RERR)
+            CALL @WOBJ(OBJ,"GET",P:'.type',FILETYPE,"",RERR)
+            FIELD.NAME='files[':FILENAME:']'
+            FIELD.VALUE='@':SOURCEFILE
+            IF FILETYPE # "" THEN FIELD.VALUE:=";type=":FILETYPE
+            FIELD.TYPE='file'
+            GOSUB set.field
+         NEXT X
+      END
+
+
       CALL @WOBJ(COBJ,"TOSTRING","",CJSON,"PRETTIFY",RERR)
-      
-     
+
+
 
       CALL MVDBTOOLKIT.WCALL(COBJ)
 
       CALL @WOBJ(COBJ,"TOSTRING","",TJSON,"PRETTIFY",RERR)
-      PRINT TJSON
-      
-      CALL @WOBJ(OBJ,"GET","response.data",RESPONSE,"",RERR)
 
-DEBUG
+      CALL @WOBJ(COBJ,"GET","response.data",RESPONSE,"",RERR)
 
-
+      CALL @WOBJ(ROBJ,"FROMSTRING","",RESPONSE,"",RERR)
+      CALL @WOBJ(ROBJ,"GET","message",APISTATUSMSG,"",RERR)
       RETURN
 
 
@@ -230,7 +277,11 @@ set.field: *
       CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
       CALL @WOBJ(SOBJ,"SET","name",FIELD.NAME,"",RERR)
       CALL @WOBJ(SOBJ,"SET","value",FIELD.VALUE,"",RERR)
+      IF FIELD.TYPE # "" THEN
+         CALL @WOBJ(SOBJ,"SET","fieldtype",FIELD.TYPE,"",RERR)
+      END
+      FIELD.TYPE=""
       CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
       CALL @WOBJ(COBJ,"SET.OBJECT","formfields[-1]",SJSON,"",RERR)
 
-RETURN
+      RETURN
