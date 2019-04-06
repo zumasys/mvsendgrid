@@ -17,10 +17,10 @@
       * Items to do
       *
       * Add File option. (COMPLETED)
-      * qc tests to validate fields sent
-      * Config to get user name/password/etc
+      * qc tests to validate fields sent (OUTSTANDING)
+      * Config to get user name/password/etc (COMPLETED)
       * Return Message/Status (COMPLETED)
-      * REMOVE ALL DEBUG STATEMENTS
+      * REMOVE ALL DEBUG STATEMENTS (COMPLETED)
       *
       * OBJ
       * { "api":"mailsend_v2",
