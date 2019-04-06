@@ -11,6 +11,12 @@ CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",1)
 CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickpayne@yahoo.com","",RERR)
 CALL @WOBJ(OBJ,"SET","params.to[0].name","Patrick Payne","",RERR)
 
+CALL @WOBJ(OBJ,"SET","params.from","example@example.com","",RERR)
+
+CALL @WOBJ(OBJ,"SET","params.subject","Sample email ":TIMEDATE(),"",RERR)
+
+CALL @WOBJ(OBJ,"SET","params.text","Sample Email Text","",RERR)
+
 CALL MVSENDGRID.API(OBJ)
 
 CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",RERR)

@@ -14,6 +14,12 @@
       * It will utilize the object model concept and try to wrap all sendgrid
       * functions into this one library
       *
+      * Items to do
+      * 
+      * Add File option.
+      * qc tests to validate fields sent
+      * Config to get user name/password/etc
+      * Return Message/Status
       *
       * OBJ
       * { "api":"mailsend_v2",
@@ -136,7 +142,19 @@ mailsendv2: * Send an email
       CALL @WOBJ(COBJ,"SET","url","https://api.sendgrid.com/api/mail.send.json","",RERR)
       CALL @WOBJ(COBJ,"SET","insecure","Y","",RERR)
       
+      
+      CALL @WOBJ(COBJ,"SET.OBJECT","headers","{}","",RERR)
+      
+      SENDGRID.USER="patrickpayne@yahoo.com"
+      SENDGRID.KEY="SendgridZuma12!!"
+*      CALL @WOBJ(COBJ,"SET.STRING","headers.api_user",SENDGRID.USER,"",RERR)
+*      CALL @WOBJ(COBJ,"SET.STRING","headers.api_key",SENDGRID.KEY,"",RERR)
+      
+     
       CALL @WOBJ(COBJ,"SET.ARRAY","formfields","[]","",RERR)
+
+      FIELD.NAME="api_user"; FIELD.VALUE=SENDGRID.USER; GOSUB set.field
+      FIELD.NAME="api_key"; FIELD.VALUE=SENDGRID.KEY; GOSUB set.field
 
       FOR X=1 TO NUMBER.TOO
          P="params.to[":X-1:"]"
@@ -147,7 +165,6 @@ mailsendv2: * Send an email
             TOO<-1>=THIS.TO
             TOO.NAMES<-1>=THIS.NAME
          END
-         DEBUG
       NEXT X
 
       CONVERT CHAR(254) TO '&' IN TOO
@@ -159,13 +176,41 @@ mailsendv2: * Send an email
       CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
       CALL @WOBJ(COBJ,"SET.OBJECT","formfields[-1]",SJSON,"",RERR)
       
+     
+      CALL @WOBJ(OBJ,"GET","params.from",FROMEMAIL,"",RERR)
+      IF FROMEMAIL="" THEN
+         APISTATUS="error"
+         APISTATUSMSG="Must supply from"
+         RETURN
+      END
+      FIELD.NAME="from"; FIELD.VALUE=FROMEMAIL; GOSUB set.field     
+     
+      ** GET BODY **
+      
+      CALL @WOBJ(OBJ,"GET","params.text",TEXT.BODY,"",RERR)
+      CALL @WOBJ(OBJ,"GET","params.html",HTML.BODY,"",RERR)
+      IF HTML.BODY="" AND TEXT.BODY="" THEN
+         APISTATUS="error"
+         APISTATUSMSG="Must supply either a text or html message"
+         RETURN
+      END
+      
+      FIELD.NAME="text"; FIELD.VALUE=TEXT.BODY; GOSUB set.field
+      
+      ** SUBJECT **
+      
+      CALL @WOBJ(OBJ,"GET","params.subject",SUBJECT,"",RERR)
+      IF SUBJECT="" THEN
+         APISTATUS="error"
+         APISTATUSMSG="Must supply subject"
+         RETURN
+      END
+      FIELD.NAME="subject"; FIELD.VALUE=SUBJECT; GOSUB set.field
+      
       
       CALL @WOBJ(COBJ,"TOSTRING","",CJSON,"PRETTIFY",RERR)
       
-      PRINT CJSON
-
-
-      DEBUG
+     
 
       CALL MVDBTOOLKIT.WCALL(COBJ)
 
@@ -179,3 +224,13 @@ DEBUG
 
       RETURN
 
+
+set.field: *
+
+      CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
+      CALL @WOBJ(SOBJ,"SET","name",FIELD.NAME,"",RERR)
+      CALL @WOBJ(SOBJ,"SET","value",FIELD.VALUE,"",RERR)
+      CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
+      CALL @WOBJ(COBJ,"SET.OBJECT","formfields[-1]",SJSON,"",RERR)
+
+RETURN
