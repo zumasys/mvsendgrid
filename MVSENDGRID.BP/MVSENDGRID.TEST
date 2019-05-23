@@ -8,8 +8,16 @@ CALL MVSENDGRID.API(OBJ)
 
 CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",1)
 
-CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickaaronpayne@gmail.com","",RERR)
+PRINT JSON; INPUT WAIT
+
+CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickp@zumasys.com","",RERR)
 CALL @WOBJ(OBJ,"SET","params.to[0].name","Patrick Payne","",RERR)
+
+* SINCE CC IS A OPTION, THERE IS NOT A PRE-POPULATED OBJECT, WE MUST ADD ONE
+CALL @WOBJ(OBJ,"SET.OBJECT","params.bcc[0]","{}","",RERR)
+CALL @WOBJ(OBJ,"SET","params.bcc[0].email","patrickaaronpayne@gmail.com","",RERR)
+CALL @WOBJ(OBJ,"SET","params.bcc[0].name","Patrick Payne","",RERR)
+
 
 CALL @WOBJ(OBJ,"SET","params.from","example@example.com","",RERR)
 
@@ -35,7 +43,7 @@ CALL @WOBJ(OBJ,"SET.ARRAY","params.files","[]","",RERR)
  
  CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",RERR)
  PRINT JSON
- 
+ DEBUG
 
 CALL MVSENDGRID.API(OBJ)
 

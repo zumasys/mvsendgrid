@@ -207,6 +207,61 @@ mailsendv2: * Send an email
 
       FIELD.NAME=TOO.NAMES.LABEL; FIELD.VALUE=TOO.NAMES; GOSUB set.field
 
+      * DO CC
+      
+      CALL @WOBJ(OBJ,"LENGTH","params.cc",NUMBER.CC,"",RERR)
+      IF NUMBER.CC THEN
+      
+         CC=''; CC.NAMES=''
+         FOR X=1 TO NUMBER.CC
+            P="params.cc[":X-1:"]"
+            CALL @WOBJ(OBJ,"GET",P:".email",THIS.CC,"",RERR)
+            CALL @WOBJ(OBJ,"GET",P:".name",THIS.NAME,"",RERR)
+            IF INDEX(THIS.CC,'@',1) THEN
+               CC<-1>=THIS.CC
+               CC.NAMES<-1>=THIS.NAME
+            END
+            
+         NEXT X
+   
+         CONVERT CHAR(254) TO '&' IN CC
+         CONVERT CHAR(254) TO '&' IN CC.NAMES
+ 
+         CC.LABEL="cc"; CC.NAMES.LABEL="ccname"
+         IF NUMBER.CC > 1 THEN CC.LABEL:='[]'; CC.NAMES.LABEL:='[]'
+         FIELD.NAME=CC.LABEL; FIELD.VALUE=CC; GOSUB set.field
+         FIELD.NAME=CC.NAMES.LABEL; VALUE=CC.NAMES; GOSUB set.field
+ 
+      END
+
+      * DO BCC
+      
+      CALL @WOBJ(OBJ,"LENGTH","params.bcc",NUMBER.BCC,"",RERR)
+      IF NUMBER.BCC THEN
+      
+         BCC=''; BCC.NAMES=''
+         FOR X=1 TO NUMBER.BCC
+            P="params.bcc[":X-1:"]"
+            CALL @WOBJ(OBJ,"GET",P:".email",THIS.BCC,"",RERR)
+            CALL @WOBJ(OBJ,"GET",P:".name",THIS.NAME,"",RERR)
+            IF INDEX(THIS.BCC,'@',1) THEN
+               BCC<-1>=THIS.BCC
+               BCC.NAMES<-1>=THIS.NAME
+            END
+            
+         NEXT X
+   
+         CONVERT CHAR(254) TO '&' IN BCC
+         CONVERT CHAR(254) TO '&' IN BCC.NAMES
+ 
+         BCC.LABEL="bcc"; BCC.NAMES.LABEL="bccname"
+         IF NUMBER.BCC > 1 THEN BCC.LABEL:='[]'; BCC.NAMES.LABEL:='[]'
+         FIELD.NAME=BCC.LABEL; FIELD.VALUE=BCC; GOSUB set.field
+         FIELD.NAME=BCC.NAMES.LABEL; VALUE=BCC.NAMES; GOSUB set.field
+ 
+      END
+  
+  
       CALL @WOBJ(OBJ,"GET","params.from",FROMEMAIL,"",RERR)
       IF FROMEMAIL="" THEN
          APISTATUS="error"
