@@ -43,6 +43,7 @@
       *           "name":"Nice name"
       *         }
       *       ],
+      *       "debug":"Y or N",
       *       "replyto":"address",
       *       "from":"From email address",
       *       "fromname":"From name",
@@ -91,6 +92,8 @@
       END CASE
 
       CALL @WOBJ(OBJ,"GET","api",API,"",RERR)
+      CALL @WOBJ(OBJ,"GET","debug",DO.DEBUG,"",RERR)
+      IF OCONV(DO.DEBUG[1,1],"MCU") = "Y" OR DO.DEBUG="1" THEN DO.DEBUG=1 ELSE DO.DEBUG=0
 
       CALL @WOBJ(OBJ,"SET.OBJECT","result","{}","",RERR)
 
@@ -280,8 +283,55 @@ mailsendv2: * Send an email
          RETURN
       END
 
-      FIELD.NAME="text"; FIELD.VALUE=TEXT.BODY; GOSUB set.field
-
+      * If our text.body has new lines in it we MUST write it out
+      * to a file and then pass it as a file handle!!!
+      *
+ 
+      *IF INDEX(TEXT.BODY,CHAR(13),1) OR INDEX(TEXT.BODY,CHAR(10),1) THEN
+      IF 0 THEN
+         CALL MVDBTOOLKIT.WOBJ(FOBJ,"FROMSTRING","","{}","",RERR)
+         CALL MVDBTOOLKIT.WOBJ(FOBJ,"SET","action","WRITE","",RERR)
+         TMP.DIR="/tmp"; * This needs to be fixed to be dynamic
+         TEXT.FILE.NAME=TMP.DIR:'/':@USER.NO:"_body.txt"
+         CALL MVDBTOOLKIT.WOBJ(FOBJ,"SET","path",TEXT.FILE.NAME,"",RERR)
+         CALL MVDBTOOLKIT.WOBJ(FOBJ,"SET","data",TEXT.BODY,"",RERR)
+         CALL MVDBTOOLKIT.WFILEIO(FOBJ)
+         FIELD.NAME="text"; FIELD.VALUE="@":TEXT.FILE.NAME; FIELD.TYPE="file"; GOSUB set.field
+      END ELSE
+         FIELD.NAME="text"; FIELD.VALUE=TEXT.BODY; GOSUB set.field
+      END
+      
+      * NEED TO ADD THE HTML
+      
+      IF HTML.BODY = "" AND TEXT.BODY # "" THEN
+         * WE NEED TO BUILD OUT A SIMPLE HTML VERSION, BASICALLY DOING NEW LINES
+         HAS.CR=DCOUNT(TEXT.BODY,CHAR(13))
+         HAS.LF=DCOUNT(TEXT.BODY,CHAR(10))
+         HTML.BODY=TEXT.BODY
+         BEGIN CASE
+            CASE HAS.CR AND HAS.LF
+               CONVERT CHAR(10) TO '' IN HTML.BODY
+               CONVERT CHAR(13) TO @AM IN HTML.BODY
+            CASE HAS.LF
+               CONVERT CHAR(10) TO @AM IN HTML.BODY
+            CASE HAS.CR
+               CONVERT CHAR(13) TO @AM IN HTML.BODY
+         END CASE
+         NUM.LINES=DCOUNT(HTML.BODY,@AM)
+         NEW.HTML.BODY=""
+         FOR A=1 TO NUM.LINES
+            LINE=HTML.BODY<A>
+            IF A > 1 THEN NEW.HTML.BODY:='<BR>'
+            NEW.HTML.BODY:=LINE
+        NEXT A
+        HTML.BODY=NEW.HTML.BODY
+      END
+      
+      IF HTML.BODY # "" THEN
+         *HTML.BODY="HTML VERSION<BR>":HTML.BODY
+         FIELD.NAME="html"; FIELD.VALUE=HTML.BODY; GOSUB set.field
+      END
+      
       ** SUBJECT **
 
       CALL @WOBJ(OBJ,"GET","params.subject",SUBJECT,"",RERR)
@@ -314,13 +364,10 @@ mailsendv2: * Send an email
 
       CALL @WOBJ(COBJ,"TOSTRING","",CJSON,"PRETTIFY",RERR)
 
-DEBUG
-
+      CALL @WOBJ(COBJ,"SET","debug","Y","",RERR); * SET TO DO DEBUGGING
       CALL MVDBTOOLKIT.WCALL(COBJ)
 
       CALL @WOBJ(COBJ,"TOSTRING","",TJSON,"PRETTIFY",RERR)
-PRINT TJSON
-DEBUG
 
       CALL @WOBJ(COBJ,"GET","response.data",RESPONSE,"",RERR)
 

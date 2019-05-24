@@ -23,7 +23,13 @@ CALL @WOBJ(OBJ,"SET","params.from","example@example.com","",RERR)
 
 CALL @WOBJ(OBJ,"SET","params.subject","Sample email ":TIMEDATE(),"",RERR)
 
-CALL @WOBJ(OBJ,"SET","params.text","Sample Email Text","",RERR)
+NL=CHAR(13):CHAR(10)
+
+TEXT="Line 1"
+TEXT:=NL:"Line 2"
+TEXT:=NL:"Line 3"
+
+CALL @WOBJ(OBJ,"SET","params.text",TEXT,"",RERR)
 
 CALL @WOBJ(OBJ,"SET.ARRAY","params.files","[]","",RERR)
  
