@@ -10,7 +10,7 @@ CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",1)
 
 PRINT JSON; INPUT WAIT
 
-CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickp@zumasys.com","",RERR)
+CALL @WOBJ(OBJ,"SET","params.to[0].email","patrickp@yahoo.com","",RERR)
 CALL @WOBJ(OBJ,"SET","params.to[0].name","Patrick Payne","",RERR)
 
 * SINCE CC IS A OPTION, THERE IS NOT A PRE-POPULATED OBJECT, WE MUST ADD ONE
@@ -19,7 +19,7 @@ CALL @WOBJ(OBJ,"SET","params.bcc[0].email","patrickaaronpayne@gmail.com","",RERR
 CALL @WOBJ(OBJ,"SET","params.bcc[0].name","Patrick Payne","",RERR)
 
 
-CALL @WOBJ(OBJ,"SET","params.from","example@example.com","",RERR)
+CALL @WOBJ(OBJ,"SET","params.from","noreply@zumasys.com","",RERR)
 
 CALL @WOBJ(OBJ,"SET","params.subject","Sample email ":TIMEDATE(),"",RERR)
 
@@ -31,29 +31,54 @@ TEXT:=NL:"Line 3"
 
 CALL @WOBJ(OBJ,"SET","params.text",TEXT,"",RERR)
 
+IF 1 THEN
+
 CALL @WOBJ(OBJ,"SET.ARRAY","params.files","[]","",RERR)
  
  CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
- CALL @WOBJ(SOBJ,"SET","sourcefile","/tmp/JBASELICENSE.PDF","",RERR)
+ CALL @WOBJ(SOBJ,"SET","sourcefile","C:\TEMP\TEST.PDF","",RERR)
  CALL @WOBJ(SOBJ,"SET","filename","jbaselicense.pdf","",RERR)
  CALL @WOBJ(SOBJ,"SET","type","application/pdf","",RERR)
  CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
  CALL @WOBJ(OBJ,"SET.OBJECT","params.files[-1]",SJSON,"",RERR)
  
   CALL @WOBJ(SOBJ,"FROMSTRING","","{}","",RERR)
- CALL @WOBJ(SOBJ,"SET","sourcefile","/tmp/JBASELICENSE.PDF","",RERR)
+ CALL @WOBJ(SOBJ,"SET","sourcefile","C:\TEMP\TEST.PDF","",RERR)
  CALL @WOBJ(SOBJ,"SET","filename","jbaselicense2.pdf","",RERR)
  CALL @WOBJ(SOBJ,"TOSTRING","",SJSON,"",RERR)
  CALL @WOBJ(OBJ,"SET.OBJECT","params.files[-1]",SJSON,"",RERR)
- 
+ END
  
  CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",RERR)
  PRINT JSON
- DEBUG
 
 CALL MVSENDGRID.API(OBJ)
+
+CALL @WOBJ(OBJ,"GET","result.status",STATUSCODE,"",RERR)
+CALL @WOBJ(OBJ,"GET","result.statusmsg",STATUSMSG,"",RERR)
+
+IF STATUSCODE = "ok" OR STATUSCODE[1,1] = "2" THEN NULL ELSE
+    PRINT "Failed: ":STATUSMSG
+END
 
 CALL @WOBJ(OBJ,"TOSTRING","",JSON,"PRETTIFY",RERR)
 
 PRINT JSON
+
+PRINT "PRESS RETURN FOR CURL LOG"
+
+* 04/2/2020 - Better to send curl object as json vs getting into issues with @am,@vm,@svm!!
+
+CALL @WOBJ(OBJ,"GET","result.wcalldebug",COBJ.JSON,"",RERR)
+CALL @WOBJ(COBJ,"FROMSTRING","",COBJ.JSON,"",RERR)
+
+CALL @WOBJ(COBJ,"LENGTH","response.log",CURL.LOG.LENGTH,"",RERR)
+FOR X=1 TO CURL.LOG.LENGTH
+    TAG="response.log[":X-1:"]"
+    CALL @WOBJ(COBJ,"GET",TAG,CLINE,"",RERR)
+    PRINT CLINE
+NEXT X
+
+PRINT "PRESS RETURN TO CONTINUE: ":; INPUT OK.TO.CONTINUE
+
 

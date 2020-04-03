@@ -63,8 +63,9 @@ strings.  V2 functions are POSTS and require the user name/password for the acco
       *       ]
       *    },
       *   "result": {
-      *      "status":"error or ok",
-      *      "statusmsg:"status msg"
+      *      "status":"error or ok", /* This is status msg from Sendgrid or a http code, yea bad but it is legacy
+      *      "statusmsg:"status msg",
+      *      "wcalldebug": "wcall object", /* html from original curl statement */
       *    }
       *
       *  }

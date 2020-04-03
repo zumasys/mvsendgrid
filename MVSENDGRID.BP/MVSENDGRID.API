@@ -124,6 +124,20 @@
             APISTATUSMSG="Invalid api request (":API:")"
       END CASE
 
+      * lets do a larger check for a failed call
+
+         CALL @WOBJ(COBJ,"GET","response.status",STATUSCODE,"",RERR)
+         CALL @WOBJ(COBJ,"GET","response.statusmsg",STATUSMSG,"",RERR)
+         IF STATUSCODE[1,1] # "2" THEN
+            APISTATUS=STATUSCODE
+            APISTATUSMSG=STATUSMSG
+         END
+
+         * LETS PACKAGE THE ENTIRE CURL RESPONSE FOR DEBUGGING PURPOSES.
+         CALL @WOBJ(COBJ,"TOSTRING","",COBJ.JSON,"",RERR); * SAFER TO PULL JSON
+         CALL @WOBJ(OBJ,"SET","result.wcalldebug",COBJ.JSON,"",RERR)
+
+
 end.of.routine: *
 
       CALL @WOBJ(OBJ,"SET","result.status",APISTATUS,"",RERR)
@@ -288,6 +302,8 @@ mailsendv2: * Send an email
       *
  
       *IF INDEX(TEXT.BODY,CHAR(13),1) OR INDEX(TEXT.BODY,CHAR(10),1) THEN
+      * 4/2/2020 - This fix is moving to wcall
+
       IF 0 THEN
          CALL MVDBTOOLKIT.WOBJ(FOBJ,"FROMSTRING","","{}","",RERR)
          CALL MVDBTOOLKIT.WOBJ(FOBJ,"SET","action","WRITE","",RERR)
@@ -364,8 +380,12 @@ mailsendv2: * Send an email
 
       CALL @WOBJ(COBJ,"TOSTRING","",CJSON,"PRETTIFY",RERR)
 
-      CALL @WOBJ(COBJ,"SET","debug","Y","",RERR); * SET TO DO DEBUGGING
+      IF DO.DEBUG THEN
+         CALL @WOBJ(COBJ,"SET","debug","Y","",RERR); * SET TO DO DEBUGGING
+      END
+
       CALL MVDBTOOLKIT.WCALL(COBJ)
+
 
       CALL @WOBJ(COBJ,"TOSTRING","",TJSON,"PRETTIFY",RERR)
 
@@ -373,6 +393,7 @@ mailsendv2: * Send an email
 
       CALL @WOBJ(ROBJ,"FROMSTRING","",RESPONSE,"",RERR)
       CALL @WOBJ(ROBJ,"GET","message",APISTATUSMSG,"",RERR)
+
       RETURN
 
 
