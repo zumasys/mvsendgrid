@@ -31,7 +31,7 @@ TEXT:=NL:"Line 3"
 
 CALL @WOBJ(OBJ,"SET","params.text",TEXT,"",RERR)
 
-IF 1 THEN
+IF 0 THEN
 
 CALL @WOBJ(OBJ,"SET.ARRAY","params.files","[]","",RERR)
  
