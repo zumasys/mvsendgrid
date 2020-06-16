@@ -11,11 +11,13 @@ SAMPLE_CONFIG.JSON
 
 This is the config file template.  It must be renamed to CONFIG.JSON.
 
+```
 {
   "username":"user name for sendgrid (requried for v2 apis",
   "password":"password for sendgrid (requried for v2 apis)",
   "apikey":"Api Key for v3 apis (none built yet)
 }
+```
 
 # overview
 
